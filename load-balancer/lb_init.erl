@@ -14,7 +14,6 @@
 	{reuseaddr, true}
 ]).
 
-%% Debug function.
 -define(PRINT(Var), io:format("DEBUG: ~p:~p - ~p~n~n ~p~n~n", [?MODULE, ?LINE, ??Var, Var])).
 
 start() ->
@@ -22,13 +21,10 @@ start() ->
 		{ok, ListenSocket} = gen_tcp:listen(5551, ?OPTIONS),
 		Pid = spawn(fun() -> balancer(ListenSocket) end),
     register(balancer, Pid),
-		%keepalive(ListenSocket)
 		timer:sleep(infinity)
 	end),
 	register(server, Pid),
   admin().
-
-%keepalive(ListenSocket) -> keepalive(ListenSocket).
 
 balancer(ListenSocket) ->
   receive

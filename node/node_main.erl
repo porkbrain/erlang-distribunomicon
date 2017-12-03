@@ -25,14 +25,12 @@ resolver() ->
 			Node = atom_to_binary(node(), utf8),
 			Length = integer_to_binary(byte_size(Message)),
 			From ! {response, list_to_binary([Node, <<"; Length">>, Length])},
-			local ! inc,
-			resolver();
+			local ! inc;
 		{From, report} ->
 			local ! {self(), read},
 			receive
 				N -> From ! {response, integer_to_binary(N)}
-			end,
-			resolver()
-		after 5000 ->
+			end
+		after 500 ->
 			exit(timeout)
 	end.

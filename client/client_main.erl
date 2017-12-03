@@ -27,13 +27,19 @@ run() ->
   run().
 
 bulk() ->
-  {ok, [Input]} = io:fread("\n Number of clients to spawn: ", "~d"),
+  io:fwrite("\nNumber of clients to spawn: \n"),
+  {ok, [Input]} = io:fread("", "~d"),
   for(Input).
 
 for(0) -> ok;
 
 for(N) ->
   spawn(fun() ->
+
+    if
+      (N rem 14 =:= 0) -> io:fwrite("\n=");
+      true -> io:fwrite("=")
+    end,
     {ok, Socket} = gen_tcp:connect(?ADDR, ?PORT, ?OPTIONS),
     ok = gen_tcp:send(Socket, "request"),
     gen_tcp:close(Socket)
