@@ -14,13 +14,21 @@
 
 start() ->
   gen([client]),
-  messenger().
-  %%bulk().
+  run().
+
+run() ->
+  io:fwrite("Press 'm' for messenger or 'b' for bulk bomber."),
+  {ok, [Input]} = io:fread("\n [m | b] ", "~s"),
+  case Input of
+    "m" -> messenger();
+    "b" -> bulk();
+    _Default -> io:fwrite(Input ++ " is not an option.")
+  end,
+  run().
 
 bulk() ->
   {ok, [Input]} = io:fread("\n Number of clients to spawn: ", "~d"),
-  for(Input),
-  bulk().
+  for(Input).
 
 for(0) -> ok;
 
@@ -35,8 +43,7 @@ for(N) ->
 messenger() ->
   {ok, [Input]} = io:fread("\n Message: ", "~s"),
   Response = action(client, list_to_binary(Input)),
-  ?PRINT(Response),
-  messenger().
+  ?PRINT(Response).
 
 gen(Testers) ->
   Pid = spawn(fun() ->

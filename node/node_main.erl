@@ -7,12 +7,32 @@
 
 start() ->
 	?PRINT(node()),
+	register(local, spawn(fun() -> server(0) end)),
 	timer:sleep(infinity).
+
+server(N) ->
+	receive
+		inc ->
+			server(N + 1);
+		{From, read} ->
+			From ! N,
+			server(N)
+	end.
 
 resolver() ->
 	receive
 		{From, message, Message} ->
-			?PRINT(Message),
-			From ! {response, <<"This aint gonna work bby">>},
+			Node = atom_to_binary(node(), utf8),
+			Length = integer_to_binary(byte_size(Message)),
+			From ! {response, list_to_binary([Node, <<"; Length">>, Length])},
+			local ! inc,
+			resolver();
+		{From, report} ->
+			local ! {self(), read},
+			receive
+				N -> From ! {response, integer_to_binary(N)}
+			end,
 			resolver()
+		after 5000 ->
+			exit(timeout)
 	end.

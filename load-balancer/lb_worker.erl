@@ -1,48 +1,56 @@
 -module(lb_worker).
 
--behaviour(gen_server).
-
 -record(worker, {
   node,
+  resolver,
   socket
 }).
 
--export([start_link/2]).
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
+-export([start_link/1]).
+
+-import(lb_node, [start_socket/1]).
 
 -define(PRINT(Var), io:format("DEBUG: ~p:~p - ~p~n~n ~p~n~n", [?MODULE, ?LINE, ??Var, Var])).
 
-start_link(Socket, Node) ->
-  Worker = #worker{node=Node, socket=Socket},
-  {ok, _Pid} = gen_server:start_link(?MODULE, Worker, []).
+start_link([ListenSocket, Node]) ->
+  Worker = #worker{node=Node},
+  %io:fwrite("Worker booted."),
+  {ok, spawn(fun() -> acceptor(ListenSocket, Worker) end)}.
 
-init(Worker) ->
-  process_flag(trap_exit, true),
-  gen_server:cast(self(), accept),
-  {ok, Worker}.
+  acceptor({error, Reason}, Worker) ->
+    ?PRINT(Worker),
+    ?PRINT(Reason);
 
-handle_cast(accept, Worker = #worker{socket=ListenSocket, node=_Node}) ->
-  ?PRINT("OK"),
-  {ok, AcceptSocket} = gen_tcp:accept(ListenSocket),
-  gen_tcp:send(AcceptSocket, "crap"),
-  ?PRINT(AcceptSocket),
-  lb_node:start_socket(),
-  {noreply, Worker}.
+  acceptor(ListenSocket, Worker = #worker{node=Node}) ->
+    %io:fwrite("About to accept a socket."),
+    {ok, AcceptSocket} = gen_tcp:accept(ListenSocket),
+    %io:fwrite("Let's start a new listen socket."),
+    lb_node:start_socket(Node),
+    Resolver = spawn(Node, node_main, resolver, []),
+    %io:fwrite("Looooooooop."),
+  	loop(Worker#worker{socket=AcceptSocket, resolver=Resolver}).
 
-handle_info({tcp, Socket, Message}, Worker) ->
-  ?PRINT(Message),
-  gen_tcp:close(Socket),
-  {stop, normal, Worker};
-
-handle_info({tcp_closed, _Socket}, Worker) -> {stop, normal, Worker};
-handle_info({tcp_error, _Socket, _}, Worker) -> {stop, normal, Worker};
-handle_info(Ex, Worker) ->
-  ?PRINT(Ex),
-  {noreply, Worker}.
-
-code_change(_OldVsn, State, _Extra) -> {ok, State}.
-
-terminate(normal, _Worker) -> ?PRINT("terminated");
-terminate(Reason, _Worker) -> ?PRINT(Reason).
-
-handle_call(_E, _From, Worker) -> {noreply, Worker}.
+  loop(Worker = #worker{socket=Socket, node=Node, resolver=Resolver}) ->
+  	inet:setopts(Socket, [{active, once}]),
+  	receive
+      {tcp, _From, <<"report", _/binary>>} ->
+        io:fwrite("Requests handled by " ++ atom_to_list(Node) ++ ":"),
+        Resolver ! {self(), report},
+        receive
+          {response, Response} ->
+            io:fwrite(Response),
+            gen_tcp:send(Socket, Response)
+        end,
+        loop(Worker);
+  		{tcp, _From, Message} ->
+        %io:fwrite("I've got a message :3"),
+        %io:fwrite(Node),
+        Resolver ! {self(), message, Message},
+        receive
+          {response, Response} ->
+            %io:fwrite("Response from node"),
+            %io:fwrite(Response),
+            gen_tcp:send(Socket, Response)
+        end,
+        loop(Worker)
+  	end.
