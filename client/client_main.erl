@@ -13,9 +13,9 @@
 -define(PRINT(Var), io:format("DEBUG: ~p:~p - ~p~n~n ~p~n~n", [?MODULE, ?LINE, ??Var, Var])).
 
 start() ->
-  %%gen([client]),
-  %%messenger().
-  bulk().
+  gen([client]),
+  messenger().
+  %%bulk().
 
 bulk() ->
   {ok, [Input]} = io:fread("\n Number of clients to spawn: ", "~d"),
@@ -34,7 +34,7 @@ for(N) ->
 
 messenger() ->
   {ok, [Input]} = io:fread("\n Message: ", "~s"),
-  Response = action(client, <<"request">>),
+  Response = action(client, list_to_binary(Input)),
   ?PRINT(Response),
   messenger().
 

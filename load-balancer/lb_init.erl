@@ -18,7 +18,7 @@
 
 start() ->
 	Pid = spawn_link(fun() ->
-		ListenSocket = gen_tcp:listen(5551, ?OPTIONS),
+		{ok, ListenSocket} = gen_tcp:listen(5551, ?OPTIONS),
 		Pid = spawn(fun() -> balancer(ListenSocket) end),
     register(balancer, Pid),
 		timer:sleep(infinity)
@@ -29,7 +29,7 @@ start() ->
 balancer(ListenSocket) ->
   receive
     {add_node, Node} ->
-      spawn(fun() -> lb_node:boot(ListenSocket, Node) end),
+      spawn(fun() -> lb_node:start_link([ListenSocket, Node]) end),
 			balancer(ListenSocket)
   end.
 
