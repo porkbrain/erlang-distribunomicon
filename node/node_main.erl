@@ -31,6 +31,4 @@ resolver() ->
 			receive
 				N -> From ! {response, integer_to_binary(N)}
 			end
-		after 500 ->
-			exit(timeout)
 	end.

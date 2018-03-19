@@ -9,22 +9,22 @@
 init(ListenSocket, Node) ->
   case net_kernel:connect_node(Node) of
     true ->
-      io:fwrite("Starting resolver."),
+      %% Successfully connected to a node.
       {ok, [ListenSocket, Node]};
     false ->
-      ?PRINT("Couldn't connect to the node."),
+      %% Connection to a node failed.
       false
   end.
 
 start_link(ListenSocket, Node) ->
-  io:fwrite("Starting node."),
+  %% Attempting to start a new.
   case init(ListenSocket, Node) of
     {ok, ArgsForChild} ->
-      spawn_link(fun() -> empty_listeners(ArgsForChild) end);
+      spawn_link(fun() -> start_workers(ArgsForChild) end);
     _Default -> error
   end.
 
-empty_listeners(ArgsForChild) ->
+start_workers(ArgsForChild) ->
   [spawn(fun() ->
     lb_worker:start_link(ArgsForChild)
   end) || _ <- lists:seq(1, 50)],
