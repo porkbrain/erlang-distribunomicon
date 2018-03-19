@@ -17,7 +17,7 @@ init(ListenSocket, Node) ->
   end.
 
 start_link(ListenSocket, Node) ->
-  %% Attempting to start a new.
+  %% Attempting to start a new node.
   case init(ListenSocket, Node) of
     {ok, ArgsForChild} ->
       spawn_link(fun() -> start_workers(ArgsForChild) end);
